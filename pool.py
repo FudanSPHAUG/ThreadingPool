@@ -1,26 +1,26 @@
 import threading
-import time
-import util
-import cv2
 from Queue import Queue, PriorityQueue
 
 class Thread(threading.Thread):
     output = None
+    target = None
+    args = None
     newborn = True
 
-    def __init__(self, args):
+    def __init__(self, target, args):
         super(Thread, self).__init__()
         self.args = args
+        self.target = target
 
     def run(self):
         self.newborn = False
         idx, data = self.args
-        cv2.imread(data)
-        opt = 1
+        opt = self.target(data)
         self.output = (idx, opt)
 
 class ThreadRecycler:
     args = None
+    target = None
     thread = None
     state = 'stop'  # busy/stop
     name = ''
@@ -28,6 +28,9 @@ class ThreadRecycler:
     def __init__(self, name=''):
         self.name = name
 
+    def setTarget(self, target):
+        self.target = target
+        
     def feed(self, args):
         self.args = args
 
@@ -58,9 +61,9 @@ class Pool:
     output_queue = PriorityQueue()
     thread_pool = list()
 
-    def __init__(self, num_worker):
+    def __init__(self, target, num_worker):
         for i in range(num_worker):
-            self.thread_pool.append(ThreadRecycler(name=str(i)))
+            self.thread_pool.append(ThreadRecycler(target=target, name=str(i)))
 
     def run(self, interval = 1):
         tsk = self.input_queue.qsize()
@@ -88,19 +91,3 @@ class Pool:
 
     def get(self):
         return self.output_queue.get()
-
-lst = util.search()[:1000]
-
-pool = Pool(5)
-pool.feed(lst)
-#t = threading.Thread(target=pool.run)
-#t.start()
-ts = time.time()
-pool.run()
-tf = time.time()
-print tf-ts
-ts = time.time()
-for i in lst:
-    cv2.imread(i)
-tf = time.time()
-print tf-ts
